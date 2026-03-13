@@ -1,0 +1,15 @@
+source -s abc.rc
+dft_opt.aig 
+cec /data/zhoulingfeng/aig_strashed/dft_orig.aig 
+dynamic_node_opt.aig 
+ether_opt.aig /data/zhoulingfeng/aig_strashed/ethernet_orig.aig 
+ether_opt.aig 
+cec /data/zhoulingfeng/aig_strashed/ethernet_orig.aig 
+idft_opt.aig 
+cec /data/zhoulingfeng/aig_strashed/idft_orig.aig 
+multiplier_opt.aig 
+cec /data/zhoulingfeng/aig_strashed/multiplier_orig.aig 
+sqrt_opt.aig 
+cec /data/zhoulingfeng/aig_strashed/sqrt_orig.aig 
+wb_conmax_opt.aig 
+cec /data/zhoulingfeng/aig_strashed/wb_conmax_orig.aig 
