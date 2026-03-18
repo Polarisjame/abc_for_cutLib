@@ -605,6 +605,18 @@ Abc_Ntk_t * Io_ReadAiger( char * pFileName, int fCheck )
         return NULL;
     }
 
+    fRedirected = Abc_FrameRedirectStdoutToLog( "abc_getConst.log", "w" );
+    Abc_NtkForEachObj( pNtkNew, pObj, i ){
+        // id const
+        int id = pObj->Id;
+        int type = Abc_ObjType(pObj);
+        int is_const = type == ABC_OBJ_CONST1;
+
+        printf("%d %d %d\n", id, is_const, type);
+    }
+    if(fRedirected)
+        Abc_FrameRestoreStdout();
+
     return pNtkNew;
 }
 
