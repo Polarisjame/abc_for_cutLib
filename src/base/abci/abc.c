@@ -7892,7 +7892,7 @@ usage:
 ***********************************************************************/
 int Abc_CommandRewrite( Abc_Frame_t * pAbc, int argc, char ** argv )
 {
-    Abc_Ntk_t * pNtk = Abc_FrameReadNtk(pAbc), * pDup;
+    Abc_Ntk_t * pNtk = Abc_FrameReadNtk(pAbc), * pDup = NULL;
     int c, RetValue;
     int fUpdateLevel;
     int fPrecompute;
@@ -7901,6 +7901,8 @@ int Abc_CommandRewrite( Abc_Frame_t * pAbc, int argc, char ** argv )
     int fVeryVerbose;
     int fPlaceEnable;
     int printCut;
+    int fStudent;
+    int fQuiet;
     // external functions
     extern void Rwr_Precompute();
 
@@ -7912,8 +7914,10 @@ int Abc_CommandRewrite( Abc_Frame_t * pAbc, int argc, char ** argv )
     fVeryVerbose = 0;
     fPlaceEnable = 0;
     printCut     = 0;
+    fStudent     = 0;
+    fQuiet       = 0;
     Extra_UtilGetoptReset();
-    while ( ( c = Extra_UtilGetopt( argc, argv, "lxzvwhc" ) ) != EOF )
+    while ( ( c = Extra_UtilGetopt( argc, argv, "lxzvwhcsq" ) ) != EOF )
     {
         switch ( c )
         {
@@ -7937,6 +7941,12 @@ int Abc_CommandRewrite( Abc_Frame_t * pAbc, int argc, char ** argv )
             break;
         case 'c':
             printCut ^= 1;
+            break;
+        case 's':
+            fStudent ^= 1;
+            break;
+        case 'q':
+            fQuiet ^= 1;
             break;
         case 'h':
             goto usage;
@@ -7970,10 +7980,16 @@ int Abc_CommandRewrite( Abc_Frame_t * pAbc, int argc, char ** argv )
     // modify the current network
     // pDup = Abc_NtkDup( pNtk );
     // RetValue = Abc_NtkRewrite_mine( pNtk, fUpdateLevel, fUseZeros, fVerbose, fVeryVerbose, fPlaceEnable );
-    if(!printCut)
-        RetValue = Abc_NtkRewrite( pNtk, fUpdateLevel, fUseZeros, fVerbose, fVeryVerbose, fPlaceEnable );
-    else
-        RetValue = Abc_NtkRewrite_print_Cut( pNtk, fUpdateLevel, fUseZeros, fVerbose, fVeryVerbose, fPlaceEnable );
+    {
+        extern int g_fQuietDupObj;
+        g_fQuietDupObj = 1;
+        if(!printCut)
+            RetValue = fStudent ? Abc_NtkRewrite_v2( pNtk, fUpdateLevel, fUseZeros, fVerbose, fVeryVerbose, fPlaceEnable, fQuiet )
+                                : Abc_NtkRewrite( pNtk, fUpdateLevel, fUseZeros, fVerbose, fVeryVerbose, fPlaceEnable );
+        else
+            RetValue = Abc_NtkRewrite_print_Cut( pNtk, fUpdateLevel, fUseZeros, fVerbose, fVeryVerbose, fPlaceEnable );
+        g_fQuietDupObj = 0;
+    }
     if ( RetValue == -1 )
     {
         Abc_FrameReplaceCurrentNetwork( pAbc, pDup );
@@ -7981,7 +7997,8 @@ int Abc_CommandRewrite( Abc_Frame_t * pAbc, int argc, char ** argv )
     }
     else
     {
-        Abc_NtkDelete( pDup );
+        if ( pDup )
+            Abc_NtkDelete( pDup );
         if ( RetValue == 0 )
         {
             Abc_Print( 0, "Rewriting has failed.\n" );
@@ -7991,13 +8008,15 @@ int Abc_CommandRewrite( Abc_Frame_t * pAbc, int argc, char ** argv )
     return 0;
 
 usage:
-    Abc_Print( -2, "usage: rewrite [-lzvwh]\n" );
+    Abc_Print( -2, "usage: rewrite [-lzvwhcsq]\n" );
     Abc_Print( -2, "\t         performs technology-independent rewriting of the AIG\n" );
     Abc_Print( -2, "\t-l     : toggle preserving the number of levels [default = %s]\n", fUpdateLevel? "yes": "no" );
     Abc_Print( -2, "\t-z     : toggle using zero-cost replacements [default = %s]\n", fUseZeros? "yes": "no" );
     Abc_Print( -2, "\t-v     : toggle verbose printout [default = %s]\n", fVerbose? "yes": "no" );
     Abc_Print( -2, "\t-w     : toggle printout subgraph statistics [default = %s]\n", fVeryVerbose? "yes": "no" );
     Abc_Print( -2, "\t-c     : toggle printout cut statistics [default = %s]\n", printCut? "yes": "no" );
+    Abc_Print( -2, "\t-s     : toggle Student-guided rewrite v2 [default = %s]\n", fStudent? "yes": "no" );
+    Abc_Print( -2, "\t-q     : toggle quiet Student/debug prints in v2 [default = %s]\n", fQuiet? "yes": "no" );
 //    Abc_Print( -2, "\t-p     : toggle placement-aware rewriting [default = %s]\n", fPlaceEnable? "yes": "no" );
     Abc_Print( -2, "\t-h     : print the command usage\n");
     return 1;

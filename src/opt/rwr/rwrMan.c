@@ -122,6 +122,8 @@ void Rwr_ManStop( Rwr_Man_t * p )
     Vec_PtrFree( p->vFanins );
     Vec_PtrFree( p->vFaninsCur );
     Extra_MmFixedStop( p->pMmNode );
+    ABC_FREE( p->pFeatMark );
+    ABC_FREE( p->pFeatIndex );
     ABC_FREE( p->pMapInv );
     ABC_FREE( p->pTable );
     ABC_FREE( p->pPractical );

@@ -99,6 +99,18 @@ struct Rwr_Man_t_
     abctime            timeMffc;
     abctime            timeUpdate;
     abctime            timeTotal;
+    // Student v2 runtime state
+    int                fStudentQuiet;
+    int                nStudentProgressStep;
+    int                nStudentNodesProcessed;
+    int                nStudentCutsEvaluated;
+    int                nStudentPredictions;
+    abctime            timeStudentWallStart;
+    abctime            timeStudentPredict;
+    // pre-allocated buffers for feature extraction (P1 optimization)
+    int                nFeatBufAlloc;    // allocated size
+    unsigned char *    pFeatMark;        // visited marks (nFeatBufAlloc bytes)
+    int *              pFeatIndex;       // node-to-index map (nFeatBufAlloc ints)
 };
 
 struct Rwr_Node_t_ // 24 bytes
@@ -136,6 +148,7 @@ static inline Rwr_Node_t * Rwr_NotCond( Rwr_Node_t * p, int c )  { return (Rwr_N
 extern void              Rwr_ManPreprocess( Rwr_Man_t * p );
 /*=== rwrEva.c ========================================================*/
 extern int               Rwr_NodeRewrite( Rwr_Man_t * p, Cut_Man_t * pManCut, Abc_Obj_t * pNode, int fUpdateLevel, int fUseZeros, int fPlaceEnable );
+extern int               Rwr_NodeRewrite_v2( Rwr_Man_t * p, Cut_Man_t * pManCut, Abc_Obj_t * pNode, int fUpdateLevel, int fUseZeros, int fPlaceEnable, int fQuiet );
 extern int               Rwr_NodeRewrite_mine(int sock, Rwr_Man_t * p, Rwr_Man_t * pCopy, Cut_Man_t * pManCut, Abc_Obj_t * pNode,  Abc_Ntk_t * pNtk, int index, int fUpdateLevel, int fUseZeros, int fPlaceEnable );
 extern void              Rwr_ScoresClean( Rwr_Man_t * p );
 extern void              Rwr_ScoresReport( Rwr_Man_t * p );
@@ -166,6 +179,9 @@ extern void              Rwr_ManLoadFromFile( Rwr_Man_t * p, char * pFileName );
 extern void              Rwr_ListAddToTail( Rwr_Node_t ** ppList, Rwr_Node_t * pNode );
 extern char *            Rwr_ManGetPractical( Rwr_Man_t * p );
 extern void              Rwr_print_nodeStructure( Abc_Ntk_t * pNtk, const char * pFileName );
+extern void              Rwr_StudentSetQuiet( int fQuiet );
+extern void              Rwr_StudentLogInit( int fQuiet, int nProgressStep );
+extern void              Rwr_StudentLogProgress( Rwr_Man_t * p, int fForce );
 extern void              Rwr_print( char * info );
 extern void              Rwr_printCut( Cut_Man_t * pManCut, Abc_Ntk_t * pNtk, const char * pFileName );
 extern void              Rwr_printCut_recur(Cut_Man_t * pManCut, Abc_Obj_t * pRoot, int * vVisited);

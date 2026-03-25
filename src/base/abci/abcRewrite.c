@@ -196,6 +196,102 @@ Rwr_ManAddTimeTotal( pManRwr, Abc_Clock() - clkStart );
     return RetValue;
 }
 
+int Abc_NtkRewrite_v2( Abc_Ntk_t * pNtk, int fUpdateLevel, int fUseZeros, int fVerbose, int fVeryVerbose, int fPlaceEnable, int fQuiet )
+{
+    extern int           Dec_GraphUpdateNetwork( Abc_Obj_t * pRoot, Dec_Graph_t * pGraph, int fUpdateLevel, int nGain );
+    ProgressBar * pProgress;
+    Cut_Man_t * pManCut;
+    Rwr_Man_t * pManRwr;
+    Abc_Obj_t * pNode;
+    Dec_Graph_t * pGraph;
+    int i, nNodes, nGain, fCompl, RetValue = 1;
+    abctime clk, clkStart = Abc_Clock();
+
+    assert( Abc_NtkIsStrash(pNtk) );
+    Abc_AigCleanup((Abc_Aig_t *)pNtk->pManFunc);
+
+    pManRwr = Rwr_ManStart( 0 );
+    if ( pManRwr == NULL )
+        return 0;
+    pManRwr->fStudentQuiet = fQuiet;
+    pManRwr->nStudentProgressStep = 1000;
+    pManRwr->timeStudentWallStart = Abc_Clock();
+    Rwr_StudentSetQuiet( fQuiet );
+    Rwr_StudentLogInit( fQuiet, pManRwr->nStudentProgressStep );
+    if ( fUpdateLevel )
+        Abc_NtkStartReverseLevels( pNtk, 0 );
+clk = Abc_Clock();
+    pManCut = Abc_NtkStartCutManForRewrite( pNtk );
+Rwr_ManAddTimeCuts( pManRwr, Abc_Clock() - clk );
+    pNtk->pManCut = pManCut;
+
+    if ( fVeryVerbose )
+        Rwr_ScoresClean( pManRwr );
+
+    pManRwr->nNodesBeg = Abc_NtkNodeNum(pNtk);
+    nNodes = Abc_NtkObjNumMax(pNtk);
+    pProgress = Extra_ProgressBarStart( stdout, nNodes );
+    Abc_NtkForEachNode( pNtk, pNode, i )
+    {
+        Extra_ProgressBarUpdate( pProgress, i, NULL );
+        if ( i >= nNodes )
+            break;
+        if ( Abc_NodeIsPersistant(pNode) )
+            continue;
+        if ( Abc_ObjFanoutNum(pNode) > 1000 )
+            continue;
+
+        nGain = Rwr_NodeRewrite_v2( pManRwr, pManCut, pNode, fUpdateLevel, fUseZeros, fPlaceEnable, fQuiet );
+        if ( !(nGain > 0 || (nGain == 0 && fUseZeros)) )
+            continue;
+
+        pGraph = (Dec_Graph_t *)Rwr_ManReadDecs(pManRwr);
+        fCompl = Rwr_ManReadCompl(pManRwr);
+
+        if ( fPlaceEnable )
+            Abc_AigUpdateReset( (Abc_Aig_t *)pNtk->pManFunc );
+
+        if ( fCompl )
+            Dec_GraphComplement( pGraph );
+clk = Abc_Clock();
+        if ( !Dec_GraphUpdateNetwork( pNode, pGraph, fUpdateLevel, nGain ) )
+        {
+            RetValue = -1;
+            break;
+        }
+Rwr_ManAddTimeUpdate( pManRwr, Abc_Clock() - clk );
+        if ( fCompl )
+            Dec_GraphComplement( pGraph );
+    }
+    Extra_ProgressBarStop( pProgress );
+    Rwr_StudentLogProgress( pManRwr, 1 );
+    Rwr_StudentSetQuiet( 0 );
+Rwr_ManAddTimeTotal( pManRwr, Abc_Clock() - clkStart );
+    pManRwr->nNodesEnd = Abc_NtkNodeNum(pNtk);
+    if ( fVerbose )
+        Rwr_ManPrintStats( pManRwr );
+    if ( fVeryVerbose )
+        Rwr_ScoresReport( pManRwr );
+    Rwr_ManStop( pManRwr );
+    Cut_ManStop( pManCut );
+    pNtk->pManCut = NULL;
+
+    Abc_NtkReassignIds( pNtk );
+    if ( RetValue >= 0 )
+    {
+        if ( fUpdateLevel )
+            Abc_NtkStopReverseLevels( pNtk );
+        else
+            Abc_NtkLevel( pNtk );
+        if ( !Abc_NtkCheck( pNtk ) )
+        {
+            printf( "Abc_NtkRewrite_v2: The network check has failed.\n" );
+            return 0;
+        }
+    }
+    return RetValue;
+}
+
 int Abc_NtkRewrite_print_Cut( Abc_Ntk_t * pNtk, int fUpdateLevel, int fUseZeros, int fVerbose, int fVeryVerbose, int fPlaceEnable )
 {
     extern int           Dec_GraphUpdateNetwork( Abc_Obj_t * pRoot, Dec_Graph_t * pGraph, int fUpdateLevel, int nGain );

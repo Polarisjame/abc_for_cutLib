@@ -186,11 +186,14 @@ Abc_Ntk_t * Abc_NtkLogicToNetlist( Abc_Ntk_t * pNtk )
     }
     // duplicate all nodes
     fRedirected = Abc_FrameRedirectStdoutToLog( "abc_logic2netlist.log", "w" );
+    extern int g_fQuietDupObj;
+    g_fQuietDupObj = 0;
     Abc_NtkForEachNode( pNtk, pObj, i ){
         Abc_NtkDupObj(pNtkNew, pObj, 0);
     }
     if ( fRedirected )
         Abc_FrameRestoreStdout();
+    g_fQuietDupObj = 1;
     // first add the nets to the CO drivers
     Abc_NtkForEachCo( pNtk, pObj, i )
     {

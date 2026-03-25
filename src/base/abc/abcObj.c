@@ -29,6 +29,9 @@
 
 ABC_NAMESPACE_IMPL_START
 
+// global flag to suppress Abc_NtkDupObj print during rewrite
+int g_fQuietDupObj = 1;
+
 
 ////////////////////////////////////////////////////////////////////////
 ///                        DECLARATIONS                              ///
@@ -344,7 +347,8 @@ Abc_Obj_t * Abc_NtkDupObj( Abc_Ntk_t * pNtkNew, Abc_Obj_t * pObj, int fCopyName 
     Abc_Obj_t * pObjNew;
     // create the new object
     pObjNew = Abc_NtkCreateObj( pNtkNew, (Abc_ObjType_t)pObj->Type );
-    printf("Old Node Id:%d, New Node ID: %d\n", pObj->Id, pObjNew->Id);
+    if ( !g_fQuietDupObj )
+        printf("Old Node Id:%d, New Node ID: %d\n", pObj->Id, pObjNew->Id);
     // transfer names of the terminal objects
     if ( fCopyName )
     {

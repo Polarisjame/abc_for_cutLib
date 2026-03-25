@@ -494,7 +494,8 @@ void Abc_dup_recur(Abc_Obj_t * pRoot, Vec_Ptr_t * vNodes, int * vVisited){
     Abc_Obj_t * pFanin;
     int i;
     if(vVisited[pRoot -> Id] == 1)   return;
-    if (Abc_ObjIsPi(pRoot)){
+    // skip everything that is not an AND gate (PI, PO, constant, latch, etc.)
+    if ( !Abc_ObjIsNode(pRoot) ){
         return;
     }
     Abc_ObjForEachFanin(pRoot, pFanin, i){
@@ -508,19 +509,15 @@ void Abc_dup_recur(Abc_Obj_t * pRoot, Vec_Ptr_t * vNodes, int * vVisited){
 Vec_Ptr_t * Abc_DupDfs_mine(Abc_Ntk_t * pNtk){
     int i;
     int nNodes = Abc_NtkObjNumMax(pNtk);
-    int vVisited[nNodes+1000];
-    for (i = 0; i < nNodes+1000; i++){
-        vVisited[i] = 0;
-    }
+    int * vVisited = ABC_CALLOC( int, nNodes );
     Vec_Ptr_t * vNodes = Vec_PtrAlloc(nNodes);
     Abc_Obj_t *pPo;
 
     Abc_NtkForEachPo( pNtk, pPo, i ){
-        // printf("%d %d \n",pPo->Id, Abc_ObjFanin0(pPo)->Id);
         Abc_dup_recur(Abc_ObjFanin0(pPo), vNodes, vVisited);
     }
+    ABC_FREE( vVisited );
     return vNodes;
-    
 }
 
 Abc_Ntk_t * Abc_NtkDup_mine( Abc_Ntk_t * pNtk, int * fakeId2ID)
@@ -625,10 +622,13 @@ Abc_Ntk_t * Abc_NtkDupDfs( Abc_Ntk_t * pNtk )
     // copy the internal nodes
     vNodes = Abc_NtkDfs( pNtk, 0 );
     fRedirected = Abc_FrameRedirectStdoutToLog( "abc_logictopo.log", "w" );
+    extern int g_fQuietDupObj;
+    g_fQuietDupObj = 0;
     Vec_PtrForEachEntry( Abc_Obj_t *, vNodes, pObj, i )
         Abc_NtkDupObj( pNtkNew, pObj, 0 );
     if ( fRedirected )
         Abc_FrameRestoreStdout();
+    g_fQuietDupObj = 1;
     Vec_PtrFree( vNodes );
     // reconnect all objects (no need to transfer attributes on edges)
     Abc_NtkForEachObj( pNtk, pObj, i )
