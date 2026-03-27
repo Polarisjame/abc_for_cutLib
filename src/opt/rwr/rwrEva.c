@@ -24,6 +24,7 @@
 #include "rwrStudent.h"
 #include "bool/dec/dec.h"
 #include "aig/ivy/ivy.h"
+#include <math.h>
 
 ABC_NAMESPACE_IMPL_START
 
@@ -50,6 +51,7 @@ static int Rwr_StudentIsLeaf( Abc_Obj_t * pObj, Vec_Ptr_t * vLeaves );
 static void Rwr_StudentCollectCone_rec( Abc_Obj_t * pObj, Vec_Ptr_t * vLeaves, unsigned char * pMark, Vec_Ptr_t * vNodes );
 static int Rwr_StudentExtractFeaturesEx( Abc_Ntk_t * pNtk, Abc_Obj_t * pRoot, Vec_Ptr_t * vLeaves, Abc_Obj_t * pContextRoot, double * pFeatures );
 static int Rwr_StudentExtractFeatures( Abc_Ntk_t * pNtk, Abc_Obj_t * pRoot, Vec_Ptr_t * vLeaves, double * pFeatures );
+static int Rwr_StudentEnsureModelLoaded( void );
 static double Rwr_StudentPredictDelay( Abc_Ntk_t * pNtk, Abc_Obj_t * pRoot, Vec_Ptr_t * vLeaves );
 static double Rwr_StudentPredictDelayTimed( Abc_Ntk_t * pNtk, Abc_Obj_t * pRoot, Vec_Ptr_t * vLeaves, abctime * pTime );
 static double Rwr_StudentPredictDelayInPlace( Abc_Ntk_t * pNtk, Abc_Obj_t * pNewRoot, Vec_Ptr_t * vLeaves, Abc_Obj_t * pOrigRoot, abctime * pTime );
@@ -573,11 +575,28 @@ static int Rwr_StudentExtractFeatures( Abc_Ntk_t * pNtk, Abc_Obj_t * pRoot, Vec_
     return Rwr_StudentExtractFeaturesEx( pNtk, pRoot, vLeaves, NULL, pFeatures );
 }
 
+static int Rwr_StudentEnsureModelLoaded( void )
+{
+    if ( Rwr_StudentHasModel() )
+        return 1;
+    if ( !Rwr_StudentLoadModel( Rwr_StudentDefaultModelPath() ) )
+    {
+        Abc_Print( -1, "Student runtime model load failed: %s\n", Rwr_StudentDefaultModelPath() );
+        return 0;
+    }
+    return 1;
+}
+
 static double Rwr_StudentPredictDelay( Abc_Ntk_t * pNtk, Abc_Obj_t * pRoot, Vec_Ptr_t * vLeaves )
 {
     double Features[RWR_STUDENT_INPUT_DIM];
-    if ( !Rwr_StudentExtractFeatures( pNtk, pRoot, vLeaves, Features ) )
+    if ( !Rwr_StudentEnsureModelLoaded() )
         return 1.0e100;
+    if ( !Rwr_StudentExtractFeatures( pNtk, pRoot, vLeaves, Features ) )
+    {
+        Abc_Print( -1, "Student feature extraction failed for root %d.\n", pRoot ? pRoot->Id : -1 );
+        return 1.0e100;
+    }
     return Rwr_StudentInferDelay( Features );
 }
 
@@ -594,8 +613,14 @@ static double Rwr_StudentPredictDelayInPlace( Abc_Ntk_t * pNtk, Abc_Obj_t * pNew
 {
     double Features[RWR_STUDENT_INPUT_DIM];
     abctime clk = Abc_Clock();
+    if ( !Rwr_StudentEnsureModelLoaded() )
+    {
+        if ( pTime ) *pTime = Abc_Clock() - clk;
+        return 1.0e100;
+    }
     if ( !Rwr_StudentExtractFeaturesEx( pNtk, pNewRoot, vLeaves, pOrigRoot, Features ) )
     {
+        Abc_Print( -1, "Student in-place feature extraction failed for root %d.\n", pNewRoot ? Abc_ObjRegular(pNewRoot)->Id : -1 );
         if ( pTime ) *pTime = Abc_Clock() - clk;
         return 1.0e100;
     }
@@ -636,6 +661,8 @@ void Rwr_StudentSetQuiet( int fQuiet )
 
 void Rwr_StudentLogInit( int fQuiet, int nProgressStep )
 {
+    if ( fQuiet )
+        return;
     FILE * pFile = Abc_FrameOpenLogFile( "rwr_student_eval.log", "w" );
     time_t TimeNow;
     struct tm * pTm;
@@ -648,8 +675,7 @@ void Rwr_StudentLogInit( int fQuiet, int nProgressStep )
         fprintf( pFile, "run_start=%s quiet=%d progress_step=%d\n", Buffer, fQuiet, nProgressStep );
     else
         fprintf( pFile, "run_start=unknown quiet=%d progress_step=%d\n", fQuiet, nProgressStep );
-    fprintf( pFile, "model_src=checkpoints/extract_cutlib_student/best.pt:model_state_dict\n" );
-    fprintf( pFile, "norm_src=/data/zhoulingfeng/data_cutLib/prepared_cache_student/{x_mu,x_inv_sigma,y_mu,y_inv_sigma}.npy\n" );
+    fprintf( pFile, "model_src=%s\n", Rwr_StudentModelPath() ? Rwr_StudentModelPath() : Rwr_StudentDefaultModelPath() );
     fclose( pFile );
 }
 
@@ -658,6 +684,8 @@ void Rwr_StudentLogProgress( Rwr_Man_t * p, int fForce )
     FILE * pFile;
     double PredTotalUs, PredAvgUs, ElapsedSec;
     if ( p == NULL )
+        return;
+    if ( p->fStudentQuiet )
         return;
     if ( !fForce )
     {
@@ -684,6 +712,8 @@ void Rwr_StudentLogProgress( Rwr_Man_t * p, int fForce )
 
 static void Rwr_StudentLogChoice( Abc_Obj_t * pRoot, Cut_Cut_t * pCut, int GainBest, double OriDelay, double NewDelay, double DelayGainBest, abctime OriPredTime, abctime CandPredTotalTime, abctime BestPredTime, int nSubgraphsEvald, abctime EvalTotalTime )
 {
+    if ( g_RwrStudentQuiet )
+        return;
     FILE * pFile = Abc_FrameOpenLogFile( "rwr_student_eval.log", "a" );
     int i;
     double CandPredTotalUs = Rwr_StudentTimeToMicroseconds( CandPredTotalTime );
@@ -1172,7 +1202,7 @@ static Dec_Graph_t * Rwr_CutEvaluate_v2( Rwr_Man_t * p, Abc_Obj_t * pRoot, Cut_C
     int nSubgraphsEvald = 0;
     abctime EvalStart = Abc_Clock();
     abctime CandPredTotalTime = 0, BestPredTime = 0;
-    double DelayMargin = 20.0;
+    double DelayMargin = 10.0;
 
     (void)fPlaceEnable;
 

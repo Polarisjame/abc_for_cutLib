@@ -1672,8 +1672,8 @@ Vec_Str_t * Scl_LibertyReadSclStr( Scl_Tree_t * p, int fVerbose, int fVeryVerbos
                         { printf( "Table indexes have different values\n" ); return NULL; }  
                     Vec_VecFree( (Vec_Vec_t *)vTables[k] );
                     // printf("Curr Phase: %d\n", k);
-                    Vec_FltForEachEntry( vValues, Entry, index )
-                        printf("%f ",Entry);
+                    // Vec_FltForEachEntry( vValues, Entry, index )
+                    //     printf("%f ",Entry);
                     // printf("\n");
                     Scl_LibertyDumpTables( vOut, vInd0, vInd1, vValues );
                     Vec_FltFree( vInd0 );

@@ -539,7 +539,9 @@ static inline void Scl_LibPinArrival( SC_Timing * pTime, SC_Pair * pArrIn, SC_Pa
         pSlewOut->rise = Abc_MaxFloat( pSlewOut->rise,                Scl_LibLookup(&pTime->pRiseTrans, pSlewIn->fall, pLoad->rise) );
         pSlewOut->fall = Abc_MaxFloat( pSlewOut->fall,                Scl_LibLookup(&pTime->pFallTrans, pSlewIn->rise, pLoad->fall) );
     }
-    printf("%f %f %f %f\n", Scl_LibLookup(&pTime->pCellRise,  pSlewIn->rise, pLoad->rise), Scl_LibLookup(&pTime->pCellFall,  pSlewIn->fall, pLoad->fall), Scl_LibLookup(&pTime->pCellRise,  pSlewIn->fall, pLoad->rise), Scl_LibLookup(&pTime->pCellFall,  pSlewIn->rise, pLoad->fall));
+    extern int g_fQuietDupObj;
+    if(!g_fQuietDupObj)
+        printf("%f %f %f %f\n", Scl_LibLookup(&pTime->pCellRise,  pSlewIn->rise, pLoad->rise), Scl_LibLookup(&pTime->pCellFall,  pSlewIn->fall, pLoad->fall), Scl_LibLookup(&pTime->pCellRise,  pSlewIn->fall, pLoad->rise), Scl_LibLookup(&pTime->pCellFall,  pSlewIn->rise, pLoad->fall));
 }
 static inline void Scl_LibPinDeparture( SC_Timing * pTime, SC_Pair * pDepIn, SC_Pair * pSlewIn, SC_Pair * pLoad, SC_Pair * pDepOut )
 {

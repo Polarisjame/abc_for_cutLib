@@ -490,7 +490,9 @@ Map_Node_t * Map_NodeAnd( Map_Man_t * pMan, Map_Node_t * p1, Map_Node_t * p2 )
     }
     // create the new node
     pEnt = Map_NodeCreate( pMan, p1, p2 );
-    printf("Map Node ID:%d \n", pEnt->Num);
+    extern int g_fQuietDupObj;
+    if(!g_fQuietDupObj)
+        printf("Map Node ID:%d \n", pEnt->Num);
     // add the node to the corresponding linked list in the table
     pEnt->pNext = pMan->pBins[Key];
     pMan->pBins[Key] = pEnt;

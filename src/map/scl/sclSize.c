@@ -367,7 +367,9 @@ void Abc_SclTimeNode( SC_Man * p, Abc_Obj_t * pObj, int fDept )
     }
     // get the library cell
     pCell = Abc_SclObjCell( pObj );
-    printf("Current Obj: %d \n", pObj->Id);
+    extern int g_fQuietDupObj;
+    if(!g_fQuietDupObj)
+        printf("Current Obj: %d \n", pObj->Id);
     // compute for each fanin
     Abc_ObjForEachFanin( pObj, pFanin, k )
     {
@@ -425,10 +427,13 @@ void Abc_SclTimeNtkRecompute( SC_Man * p, float * pArea, float * pDelay, int fRe
         Abc_SclTimeNode( p, pObj, 0 );
     {
         int fRedirected = Abc_FrameRedirectStdoutToLog( "abc_stime_report.log", "w" );
+        extern int g_fQuietDupObj;
+        g_fQuietDupObj = 0;
         Abc_NtkForEachNode1( p->pNtk, pObj, i )
             Abc_SclTimeNode( p, pObj, 0 );
         if ( fRedirected )
             Abc_FrameRestoreStdout();
+        g_fQuietDupObj = 1;
     }
     Abc_NtkForEachCo( p->pNtk, pObj, i )
         Abc_SclTimeNode( p, pObj, 0 );

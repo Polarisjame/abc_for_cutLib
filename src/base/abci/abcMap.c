@@ -72,6 +72,8 @@ Abc_Ntk_t * Abc_NtkMap( Abc_Ntk_t * pNtk, double DelayTarget, double AreaMulti, 
     abctime clk, clkTotal = Abc_Clock();
     Mio_Library_t * pLib = (Mio_Library_t *)Abc_FrameReadLibGen();
 
+    extern int g_fQuietDupObj;
+    g_fQuietDupObj = 1;
     assert( Abc_NtkIsStrash(pNtk) );
     // derive library from SCL
     // if the library is created here, it will be deleted when pSuperLib is deleted in Map_SuperLibFree()
@@ -308,6 +310,8 @@ Map_Man_t * Abc_NtkToMap( Abc_Ntk_t * pNtk, double DelayTarget, int fRecovery, f
     vNodes = Abc_AigDfsMap( pNtk );
     {
         int fRedirected = Abc_FrameRedirectStdoutToLog( "aig2map.log", "w" );
+        extern int g_fQuietDupObj;
+        g_fQuietDupObj = 0;
         Vec_PtrForEachEntry( Abc_Obj_t *, vNodes, pNode, i )
         {
             if ( Abc_ObjIsLatch(pNode) )
@@ -323,7 +327,8 @@ Map_Man_t * Abc_NtkToMap( Abc_Ntk_t * pNtk, double DelayTarget, int fRecovery, f
                 Map_NotCond( Abc_ObjFanin0(pNode)->pCopy, (int)Abc_ObjFaninC0(pNode) ),
                 Map_NotCond( Abc_ObjFanin1(pNode)->pCopy, (int)Abc_ObjFaninC1(pNode) ) );
             assert( pNode->pCopy == NULL );
-            printf("AIG Node Id:%d \n", pNode->Id);
+            if ( !g_fQuietDupObj )
+                printf("AIG Node Id:%d \n", pNode->Id);
             // remember the node
             pNode->pCopy = (Abc_Obj_t *)pNodeMap;
             if ( pSwitching )
@@ -339,6 +344,7 @@ Map_Man_t * Abc_NtkToMap( Abc_Ntk_t * pNtk, double DelayTarget, int fRecovery, f
         }
         if ( fRedirected )
             Abc_FrameRestoreStdout();
+        g_fQuietDupObj = 1;
     }
     assert( Map_ManReadBufNum(pMan) == pNtk->nBarBufs );
     Vec_PtrFree( vNodes );
@@ -428,7 +434,7 @@ Abc_Obj_t * Abc_NodeFromMapPhase_rec( Abc_Ntk_t * pNtkNew, Map_Node_t * pNodeMap
     pNodeNew = (Abc_Obj_t *)Map_NodeReadData( pNodeMap, fPhase );
     if ( pNodeNew )
         return pNodeNew;
-
+    extern int g_fQuietDupObj;
     // get the information about the best cut 
     pCutBest   = Map_NodeReadCutBest( pNodeMap, fPhase );
     {
@@ -441,6 +447,7 @@ Abc_Obj_t * Abc_NodeFromMapPhase_rec( Abc_Ntk_t * pNtkNew, Map_Node_t * pNodeMap
         printf("\n");
         if ( fRedirected )
             Abc_FrameRestoreStdout();
+        g_fQuietDupObj = 1;
     }
     pSuperBest = Map_CutReadSuperBest( pCutBest, fPhase );
     uPhaseBest = Map_CutReadPhaseBest( pCutBest, fPhase );
@@ -466,6 +473,7 @@ Abc_Obj_t * Abc_NodeFromMapPhase_rec( Abc_Ntk_t * pNtkNew, Map_Node_t * pNodeMap
         pNodeNew = Abc_NodeFromMapSuper_rec( pNtkNew, pNodeMap, pSuperBest, pNodePIs, nLeaves );
         if ( fRedirected )
             Abc_FrameRestoreStdout();
+        g_fQuietDupObj = 1;
     }
     Vec_IntWriteEntry( pNtkNew->vOrigNodeIds, pNodeNew->Id, Abc_Var2Lit( Map_NodeReadAigId(pNodeMap), fPhase ) );
     Map_NodeSetData( pNodeMap, fPhase, (char *)pNodeNew );

@@ -66,3 +66,4 @@ tags
 /*.bench
 /output.txt
 /abc.history
+/.vscode/*

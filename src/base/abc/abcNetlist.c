@@ -157,10 +157,13 @@ Abc_Ntk_t * Abc_NtkLogicToNetlist( Abc_Ntk_t * pNtk )
     assert( Abc_NtkIsLogic(pNtk) );
 
     fRedirected = Abc_FrameRedirectStdoutToLog( "abc_test.log", "w" );
+    extern int g_fQuietDupObj;
+    g_fQuietDupObj = 0;
     // remove dangling nodes
     Abc_NtkCleanup( pNtk, 0 );
     if ( fRedirected )
         Abc_FrameRestoreStdout();
+    g_fQuietDupObj = 1;
 
     // make sure the CO names are unique
     Abc_NtkCheckUniqueCiNames( pNtk );
