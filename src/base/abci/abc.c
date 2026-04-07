@@ -7982,13 +7982,13 @@ int Abc_CommandRewrite( Abc_Frame_t * pAbc, int argc, char ** argv )
     // RetValue = Abc_NtkRewrite_mine( pNtk, fUpdateLevel, fUseZeros, fVerbose, fVeryVerbose, fPlaceEnable );
     {
         extern int g_fQuietDupObj;
-        g_fQuietDupObj = 1;
+        g_fQuietDupObj = 0;
         if(!printCut)
             RetValue = fStudent ? Abc_NtkRewrite_v2( pNtk, fUpdateLevel, fUseZeros, fVerbose, fVeryVerbose, fPlaceEnable, fQuiet )
                                 : Abc_NtkRewrite( pNtk, fUpdateLevel, fUseZeros, fVerbose, fVeryVerbose, fPlaceEnable );
         else
             RetValue = Abc_NtkRewrite_print_Cut( pNtk, fUpdateLevel, fUseZeros, fVerbose, fVeryVerbose, fPlaceEnable );
-        g_fQuietDupObj = 0;
+        g_fQuietDupObj = 1;
     }
     if ( RetValue == -1 )
     {
